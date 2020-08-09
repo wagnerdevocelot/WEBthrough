@@ -1,6 +1,5 @@
 package main
 
-// importação do pacote io/ioutil
 import "io/ioutil"
 
 // Pagina é um struct com a estrutura que as páginas da aplicação terão
@@ -9,26 +8,30 @@ type Pagina struct {
 	Corpo  []byte
 }
 
-// A struct Pagina descreve como os dados da página serão armazenados na memória.
-// Mas e o armazenamento persistente? Podemos resolver isso criando um método salvar:
-
 func (p *Pagina) salvar() error {
 	nomeDoArquivo := p.Titulo + ".txt"
 	return ioutil.WriteFile(nomeDoArquivo, p.Corpo, 0600)
 }
 
-// O que o método salvar faz? Ele tem um receiver que aponta para Pagina e tem um argumento "p"
-// salvar não possui parametros além do presente no receiver, e retorna um error.
+// Além de salvar páginas, também queremos carregar páginas:
+func carregaPagina(titulo string) (*Pagina, error) {
+	nomeDoArquivo := titulo + ".txt"
+	corpo, err := ioutil.ReadFile(nomeDoArquivo)
+	if err != nil {
+		return nil, err
+	}
+	return &Pagina{Titulo: titulo, Corpo: corpo}, nil
+}
 
-// nomeDoArquivo é uma varável que armazena o valor, Titulo + a string ".txt" que é a extenção
+// Como carregaPagina lê nosso arquivo? carregaPagina recebe uma string como parâmetro e nessa vai o titulo
+// do arquivo, carregaPagina retorna Pagina.
 
-// O retorno de salvar é um error pois esse é o mesmo tipo que WriteFile retorna.
-// O que WriteFile faz? WriteFile escreve um slice de bytes em um arquivo se salvar funcionar sem erros
-// ele retorna nil que é o zero value para pointers.
+// nomeDoArquivo pega o nome passado em parametro como titulo e concatena com ".txt"
 
-// O literal inteiro 0600, passado como o terceiro parâmetro para WriteFile, indica que o arquivo
-// deve ser criado com permissões de leitura e gravação apenas para o usuário atual.
-// (Veja a página de manual do Unix open(2) para mais detalhes.)
+// ReadFile lê o arquivo. ReadFile tem mais de um retorno, um []byte e error, nesse caso o []byte é o corpo
+// da pagina. O if statement logo após é um tratamento de erros comum em Go, nesse caso se tentarmos ler
+// um arquivo que não existe a função retornará uma mensagem indicando o problema e pra que isso aconteça
+// err precisa ser diferente de nil
 
 func main() {
 
