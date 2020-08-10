@@ -1,6 +1,9 @@
 package main
 
-import "io/ioutil"
+import (
+	"fmt"
+	"io/ioutil"
+)
 
 // Pagina é um struct com a estrutura que as páginas da aplicação terão
 type Pagina struct {
@@ -8,6 +11,7 @@ type Pagina struct {
 	Corpo  []byte
 }
 
+// salvar persiste os dados da página
 func (p *Pagina) salvar() error {
 	nomeDoArquivo := p.Titulo + ".txt"
 	return ioutil.WriteFile(nomeDoArquivo, p.Corpo, 0600)
@@ -23,16 +27,21 @@ func carregaPagina(titulo string) (*Pagina, error) {
 	return &Pagina{Titulo: titulo, Corpo: corpo}, nil
 }
 
-// Como carregaPagina lê nosso arquivo? carregaPagina recebe uma string como parâmetro e nessa vai o titulo
-// do arquivo, carregaPagina retorna Pagina.
-
-// nomeDoArquivo pega o nome passado em parametro como titulo e concatena com ".txt"
-
-// ReadFile lê o arquivo. ReadFile tem mais de um retorno, um []byte e error, nesse caso o []byte é o corpo
-// da pagina. O if statement logo após é um tratamento de erros comum em Go, nesse caso se tentarmos ler
-// um arquivo que não existe a função retornará uma mensagem indicando o problema e pra que isso aconteça
-// err precisa ser diferente de nil
+// Neste ponto, temos uma estrutura de dados simples e a capacidade de salvar e carregar um arquivo.
+// Vamos escrever uma main func para testar o que escrevemos:
 
 func main() {
-
+	escrever := &Pagina{Titulo: "PaginaTeste", Corpo: []byte("Esta é uma pagina de exemplo.")}
+	escrever.salvar()
+	ler, _ := carregaPagina("Pagina teste")
+	fmt.Println(string(ler.Corpo))
 }
+
+// Após compilar e executar este código, um arquivo chamado PaginaTeste.txt será criado,
+// contendo o conteúdo de escrever. O arquivo será então lido na estrutura ler e seu corpo impresso na tela.
+
+// Você pode compilar e executar o programa assim:
+
+// $ go build wiki.go
+// $ ./wiki
+// Esta é uma pagina de exemplo.
