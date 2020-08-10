@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+
+	// Para usar o net/http package, ele deve ser importado:
+	"net/http"
 )
 
 // Pagina é um struct com a estrutura que as páginas da aplicação terão
@@ -27,9 +30,24 @@ func carregaPagina(titulo string) (*Pagina, error) {
 	return &Pagina{Titulo: titulo, Corpo: corpo}, nil
 }
 
+// Vamos criar um Handler, viewHandler que permitirá aos usuários visualizar uma página wiki.
+// Ele irá lidar com URLs prefixados com "/ view /".
+
+// Primeiro, essa função extrai o título da página ler.URL.Path, o componente do caminho da URL requisitada.
+// Path é dividido [len("/view/"):] para eliminar "/view/" componente principal do caminho da solicitação.
+// Isso ocorre porque o caminho invariavelmente começará com "/view/", que não faz parte do título da página.
+// carregaPagina então carrega os dados da página, formata a página com uma string de HTML simples
+// e a grava no "escrever" http.ResponseWriter.
+
+// Observe o uso de _ para ignorar o error value do retorno de carregaPagina. Isso é feito aqui para
+// simplificar e geralmente é considerado uma prática ruim. Cuidaremos disso mais tarde.
+
+func viewHandler(escrever http.ResponseWriter, ler *http.Request) {
+	titulo := ler.URL.Path[len("/view/"):]
+	pagina, _ := carregaPagina(titulo)
+	fmt.Fprintf(escrever, "<h1>%s</h1><div>%s</div>", pagina.Titulo, pagina.Corpo)
+}
+
 func main() {
-	escrever := &Pagina{Titulo: "PaginaTeste", Corpo: []byte("Esta é uma pagina de exemplo.")}
-	escrever.salvar()
-	ler, _ := carregaPagina("PaginaTeste")
-	fmt.Println(string(ler.Corpo))
+
 }
