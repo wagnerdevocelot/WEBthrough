@@ -36,20 +36,34 @@ func viewHandler(escrever http.ResponseWriter, ler *http.Request) {
 	fmt.Fprintf(escrever, "<h1>%s</h1><div>%s</div>", pagina.Titulo, pagina.Corpo)
 }
 
-// Para usar esse Handler, reescrevemos nossa main func para inicializar http usando o viewHandler para
-// manipular todas as solicitações no caminho /view/.
+// A função editHandler carrega a página (se não existir, cria uma Pagina struct vazia )
+// e exibe um formulário HTML
+// Esta função funcionará bem, mas todo esse HTML hardcoded é feio. Existe uma maneira melhor.
+
+func editHandler(escrever http.ResponseWriter, ler *http.Request) {
+	titulo := ler.URL.Path[len("/edit/"):]
+	pagina, err := carregaPagina(titulo)
+	if err != nil {
+		pagina = &Pagina{Titulo: titulo}
+	}
+	fmt.Fprintf(escrever, "<h1>Editando %s</h1>"+
+		"<form action=\"/save/%s\" method=\"POST\">"+
+		"<textarea name=\"body\">%s</textarea><br>"+
+		"<input type=\"submit\" value=\"Save\">"+
+		"</form>",
+		pagina.Titulo, pagina.Titulo, pagina.Corpo)
+}
+
+// Um wiki não é um wiki sem a capacidade de editar páginas. Vamos criar dois novos manipuladores: um
+// nomeado editHandler para exibir um formulário de 'página de edição' e outro nomeado saveHandler para salvar
+// os dados inseridos por meio do formulário.
+
+// OBS. saveHandler está comentado pois essa função ainda não foi feita, o Go irá acusar erro para
+// variáveis não utilizadas ou chamadas de funções que não foram implementadas.
 
 func main() {
 	http.HandleFunc("/view/", viewHandler)
+	http.HandleFunc("/edit/", editHandler)
+	//	http.HandleFunc("/save/", saveHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
-
-// Vamos criar alguns dados para Pagina, crie um novo arquivo teste.txt no diretório de wiki.go e escreva
-// Olá Mundo dentro dele, sem aspas. Vamos compilar o nosso código e tentar servir uma página wiki.
-
-// $ go build wiki.go
-// $ ./wiki
-
-// Com este servidor da web em execução, uma visita a http://localhost:8080/view/teste
-// deve mostrar uma página intitulada "teste" contendo as palavras "Olá, mundo!".
-// Se quiser um caminho diferente basta usar um arquivo com um nome diferente no lugar de teste
