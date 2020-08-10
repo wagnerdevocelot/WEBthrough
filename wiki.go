@@ -3,8 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-
-	// Para usar o net/http package, ele deve ser importado:
+	"log"
 	"net/http"
 )
 
@@ -30,24 +29,27 @@ func carregaPagina(titulo string) (*Pagina, error) {
 	return &Pagina{Titulo: titulo, Corpo: corpo}, nil
 }
 
-// Vamos criar um Handler, viewHandler que permitirá aos usuários visualizar uma página wiki.
-// Ele irá lidar com URLs prefixados com "/ view /".
-
-// Primeiro, essa função extrai o título da página ler.URL.Path, o componente do caminho da URL requisitada.
-// Path é dividido [len("/view/"):] para eliminar "/view/" componente principal do caminho da solicitação.
-// Isso ocorre porque o caminho invariavelmente começará com "/view/", que não faz parte do título da página.
-// carregaPagina então carrega os dados da página, formata a página com uma string de HTML simples
-// e a grava no "escrever" http.ResponseWriter.
-
-// Observe o uso de _ para ignorar o error value do retorno de carregaPagina. Isso é feito aqui para
-// simplificar e geralmente é considerado uma prática ruim. Cuidaremos disso mais tarde.
-
+// viewHandler escreve o titulo e corpo da pagina em html formatado
 func viewHandler(escrever http.ResponseWriter, ler *http.Request) {
 	titulo := ler.URL.Path[len("/view/"):]
 	pagina, _ := carregaPagina(titulo)
 	fmt.Fprintf(escrever, "<h1>%s</h1><div>%s</div>", pagina.Titulo, pagina.Corpo)
 }
 
-func main() {
+// Para usar esse Handler, reescrevemos nossa main func para inicializar http usando o viewHandler para
+// manipular todas as solicitações no caminho /view/.
 
+func main() {
+	http.HandleFunc("/view/", viewHandler)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
+
+// Vamos criar alguns dados para Pagina, crie um novo arquivo teste.txt no diretório de wiki.go e escreva
+// Olá Mundo dentro dele, sem aspas. Vamos compilar o nosso código e tentar servir uma página wiki.
+
+// $ go build wiki.go
+// $ ./wiki
+
+// Com este servidor da web em execução, uma visita a http://localhost:8080/view/teste
+// deve mostrar uma página intitulada "teste" contendo as palavras "Olá, mundo!".
+// Se quiser um caminho diferente basta usar um arquivo com um nome diferente no lugar de teste
