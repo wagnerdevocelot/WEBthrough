@@ -27,21 +27,9 @@ func carregaPagina(titulo string) (*Pagina, error) {
 	return &Pagina{Titulo: titulo, Corpo: corpo}, nil
 }
 
-// Neste ponto, temos uma estrutura de dados simples e a capacidade de salvar e carregar um arquivo.
-// Vamos escrever uma main func para testar o que escrevemos:
-
 func main() {
 	escrever := &Pagina{Titulo: "PaginaTeste", Corpo: []byte("Esta é uma pagina de exemplo.")}
 	escrever.salvar()
-	ler, _ := carregaPagina("Pagina teste")
+	ler, _ := carregaPagina("PaginaTeste")
 	fmt.Println(string(ler.Corpo))
 }
-
-// Após compilar e executar este código, um arquivo chamado PaginaTeste.txt será criado,
-// contendo o conteúdo de escrever. O arquivo será então lido na estrutura ler e seu corpo impresso na tela.
-
-// Você pode compilar e executar o programa assim:
-
-// $ go build wiki.go
-// $ ./wiki
-// Esta é uma pagina de exemplo.
