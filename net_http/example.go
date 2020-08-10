@@ -4,26 +4,33 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 )
-
-// A função handler é do tipo http.HandlerFunc. Leva um http.ResponseWriter e um http.Request
-// como seus argumentos.
-
-// Um valor http.ResponseWriter monta a resposta do servidor HTTP; ao escrever nele enviamos dados
-// para o cliente HTTP. Nesse caso enviei "Olá, eu adoro %s!"
-
-// Um http.Request é uma estrutura de dados que representa a solicitação HTTP do client.
-// O r.URL.Path é o componente do caminho do URL da solicitação. O [1:] significa
-// "criar um sub-slice do Path do primeiro caractere até o fim."
-// Isso remove o "/" inicial do nome do caminho.
-
-// Então qualquer coisa escrita no browser depois da raiz / é adicionado a mensagem de "Olá, eu adoro..."
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Olá, eu adoro %s!", r.URL.Path[1:])
 }
 
-func main() {
+// A main func começa com uma chamada para http.HandleFunc, que informa ao pacote http para lidar com
+// todas as solicitações para o web root ( "/" ) com handler.
 
+// Em seguida chama http.ListenAndServe, especificando que deve escutar na porta 8080 em qualquer
+// interface ( ":8080" ). (Não se preocupe com seu segundo parâmetro, nil por enquanto.) nil será
+// bloqueado até que o programa seja encerrado.
+
+// ListenAndServe sempre retorna um erro, e só retorna quando ocorre um erro inesperado.
+// Para registrar esse erro, envolvemos com a chamada de função log.Fatal.
+
+func main() {
+	http.HandleFunc("/", handler)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
+
+// Se você executar este programa e acessar o URL:
+
+// http://localhost:8080/ubuntu
+
+// o programa apresentaria uma página contendo:
+
+// Olá, eu adoro ubuntu!
