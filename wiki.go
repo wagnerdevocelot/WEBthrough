@@ -13,10 +13,28 @@ type Pagina struct {
 	Corpo  []byte
 }
 
+// Existem vários locais em nosso programa onde os erros são ignorados. Esta é uma má prática, até porque,
+// quando ocorre um erro, o programa terá um comportamento indesejado. A melhor solução é tratar os erros e
+// retornar uma mensagem de erro ao usuário. Dessa forma, se algo der errado, o servidor funcionará
+// exatamente como queremos e o usuário poderá ser notificado.
+
+// Primeiro, vamos lidar com os erros em renderizaTemplate:
+
+// A função http.Error envia um código de resposta HTTP especificado (neste caso "Erro interno do servidor")
+// e uma mensagem de erro. A decisão de colocar isso em uma função separada já está valendo a pena pois
+// tanto viewHandler e editHandler que fazem uso de renderizaTemplate possuem tratamento de erro.
+
 // renderizaTemplate faz o parse dos arquivos tratados pelos handlers
 func renderizaTemplate(escrever http.ResponseWriter, tmpl string, pagina *Pagina) {
-	template, _ := template.ParseFiles(tmpl + ".html")
+	template, err := template.ParseFiles(tmpl + ".html")
+	if err != nil {
+		http.Error(escrever, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	template.Execute(escrever, pagina)
+	if err != nil {
+		http.Error(escrever, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // salvar persiste os dados da página
@@ -56,11 +74,13 @@ func editHandler(escrever http.ResponseWriter, ler *http.Request) {
 	renderizaTemplate(escrever, "edit", pagina)
 }
 
-// O título da página (fornecido no URL) e campo do formulário, body são armazenados em uma nova Pagina.
-// O método salvar() é então chamado para gravar os dados em um arquivo e o cliente é
-// redirecionado para a /view/. O valor retornado por FormValue é do tipo string.
-// Devemos converter esse valor para []byte antes que ele caiba na struct Pagina. Usamos []byte(corpo)
-// para realizar a conversão.
+// Agora vamos consertar saveHandler:
+
+// A função salvar é uma função customizada que criamos ela não vem direto de packages do go então
+// então ela não foi implementada com retorno de erro, por isso nesse caso atribuimos a função
+// na variável err pra poder aplicar a mesma implementação de tratamento de erros padrão.
+
+// Quaisquer erros que ocorram durante pagina.salvar() serão relatados ao usuário.
 
 // A função saveHandler tratará do envio de formulários localizados nas páginas de edição
 func saveHandler(escrever http.ResponseWriter, ler *http.Request) {
@@ -68,6 +88,11 @@ func saveHandler(escrever http.ResponseWriter, ler *http.Request) {
 	corpo := ler.FormValue("body")
 	pagina := &Pagina{Titulo: titulo, Corpo: []byte(corpo)}
 	pagina.salvar()
+	err := pagina.salvar()
+	if err != nil {
+		http.Error(escrever, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	http.Redirect(escrever, ler, "/view/"+titulo, http.StatusFound)
 }
 
@@ -77,9 +102,3 @@ func main() {
 	http.HandleFunc("/save/", saveHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
-
-// para testar basta executar buildar o código novamente, executar ./wiki e abrir o browser na porta 8080
-
-// O path em view e em seguida adicione um caminho que não esxiste, assim: http://localhost:8080/view/vapordev
-// Seremos redirecionados para a pagina de Editando vapordev e quando salvar o conteudo da pagina estará
-// em um arquivo .txt com o titulo tendo o nome do path e o conteudo com o corpo da edição.
