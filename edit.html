@@ -1,0 +1,11 @@
+<!-- Vamos criar um arquivo de modelo contendo o formulário HTML. Abra um novo arquivo denominado
+edit.html e adicione as seguintes linhas: -->
+
+<h1>Editando {{.Titulo}}</h1>
+
+<form action="/save/{{.Titulo}}" method="POST">
+<div><textarea name="body" rows="20" cols="80">{{printf "%s" .Corpo}}</textarea></div>
+<div><input type="submit" value="Salvar"></div>
+</form>
+
+ <!-- =======================================> volte para wiki.go -->

@@ -2,6 +2,14 @@ package main
 
 import (
 	"fmt"
+
+	// O html/template package faz parte da biblioteca padrão do Go. Podemos usar html/template
+	// para manter o HTML em um arquivo separado, o que nos permite alterar o layout
+	// de nossa página de edição sem modificar o código Go.
+
+	// =======================================> Vá para o arquivo edit.html
+
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -36,30 +44,29 @@ func viewHandler(escrever http.ResponseWriter, ler *http.Request) {
 	fmt.Fprintf(escrever, "<h1>%s</h1><div>%s</div>", pagina.Titulo, pagina.Corpo)
 }
 
-// A função editHandler carrega a página (se não existir, cria uma Pagina struct vazia )
-// e exibe um formulário HTML
-// Esta função funcionará bem, mas todo esse HTML hardcoded é feio. Existe uma maneira melhor.
+// Modifique editHandler para usar o template, em vez do HTML hardcoded:
 
+// A função template.ParseFiles lerá o conteúdo de edit.html e retornará um ponteiro *template.Template.
+
+// O método template.Execute executa o template, escrevendo o HTML gerado no http.ResponseWriter.
+// Os identificadores .Titulo e .Corpo lá no edit.html referem-se a Titulo e Corpo
+// presentes aqui na struct Pagina.
+
+// As diretivas de temlate são colocadas entre chaves duplas. A instrução printf "%s" .Corpo
+// é uma chamada de função que tem .Corpo como uma string em vez de um fluxo de bytes como saída.
+// O html/template package ajuda a garantir que apenas HTML seguro e com aparência correta seja
+// gerado por ações de template.
+
+// editHandler carrega um formulário de edição
 func editHandler(escrever http.ResponseWriter, ler *http.Request) {
 	titulo := ler.URL.Path[len("/edit/"):]
 	pagina, err := carregaPagina(titulo)
 	if err != nil {
 		pagina = &Pagina{Titulo: titulo}
 	}
-	fmt.Fprintf(escrever, "<h1>Editando %s</h1>"+
-		"<form action=\"/save/%s\" method=\"POST\">"+
-		"<textarea name=\"body\">%s</textarea><br>"+
-		"<input type=\"submit\" value=\"Save\">"+
-		"</form>",
-		pagina.Titulo, pagina.Titulo, pagina.Corpo)
+	template, _ := template.ParseFiles("edit.html")
+	template.Execute(escrever, pagina)
 }
-
-// Um wiki não é um wiki sem a capacidade de editar páginas. Vamos criar dois novos manipuladores: um
-// nomeado editHandler para exibir um formulário de 'página de edição' e outro nomeado saveHandler para salvar
-// os dados inseridos por meio do formulário.
-
-// OBS. saveHandler está comentado pois essa função ainda não foi feita, o Go irá acusar erro para
-// variáveis não utilizadas ou chamadas de funções que não foram implementadas.
 
 func main() {
 	http.HandleFunc("/view/", viewHandler)
