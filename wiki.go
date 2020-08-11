@@ -13,13 +13,7 @@ type Pagina struct {
 	Corpo  []byte
 }
 
-// Observe que usamos quase exatamente o mesmo código de template em ambos os Handlers(view e edit).
-// Vamos remover essa duplicação movendo o código de template para sua própria função
-
-// Ela possui 3 parametros, ResponseWriter, tmpl que é uma string e um ponteiro para o struct Pagina
-// O parseFiles vem pra função usando o segundo parametro como argumento e concatena com .html
-// e então executa a função assim como faziamos nos Handler.
-
+// renderizaTemplate faz o parse dos arquivos tratados pelos handlers
 func renderizaTemplate(escrever http.ResponseWriter, tmpl string, pagina *Pagina) {
 	template, _ := template.ParseFiles(tmpl + ".html")
 	template.Execute(escrever, pagina)
@@ -41,17 +35,24 @@ func carregaPagina(titulo string) (*Pagina, error) {
 	return &Pagina{Titulo: titulo, Corpo: corpo}, nil
 }
 
-// E modifique os Handlers para usar essa função
+// E se você visitar /view/umaPaginaQueNaoExiste ?
+// Você verá uma página contendo HTML. Isso ocorre porque ele ignora o valor de retorno do
+// erro e continua tentando preencher o template sem dados. Em vez disso, se a página solicitada não existir,
+// ele deve redirecionar o cliente para a página de edição para que o conteúdo possa ser criado:
+
+// A função http.Redirect adiciona um código de status HTTP de http.StatusFound (302) e um Location
+// header à resposta HTTP.
 
 // viewHandler r o titulo e corpo da pagina em html formatado
 func viewHandler(escrever http.ResponseWriter, ler *http.Request) {
 	titulo := ler.URL.Path[len("/view/"):]
-	pagina, _ := carregaPagina(titulo)
-	// Agora só precisamos chamar a função com os parametros exigidos diminuindo a redundância
+	pagina, err := carregaPagina(titulo)
+	if err != nil {
+		http.Redirect(escrever, ler, "/edit/"+titulo, http.StatusFound)
+		return
+	}
 	renderizaTemplate(escrever, "view", pagina)
 }
-
-// E modifique os Handlers para usar essa função
 
 // editHandler carrega um formulário de edição
 func editHandler(escrever http.ResponseWriter, ler *http.Request) {
@@ -60,7 +61,6 @@ func editHandler(escrever http.ResponseWriter, ler *http.Request) {
 	if err != nil {
 		pagina = &Pagina{Titulo: titulo}
 	}
-	// Agora só precisamos chamar a função com os parametros exigidos diminuindo a redundância
 	renderizaTemplate(escrever, "edit", pagina)
 }
 
@@ -70,11 +70,3 @@ func main() {
 	//	http.HandleFunc("/save/", saveHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
-
-// Se comentarmos o registro do nosso saveHandler não implementado, podemos buildar e
-// testar nosso programa mais uma vez.
-
-// // $ go build wiki.go
-// // $ ./wiki
-
-// e na porta 8080 de localhost podemos mudar o path no browser entre view e edit
