@@ -1,14 +1,6 @@
 package main
 
 import (
-	"fmt"
-
-	// O html/template package faz parte da biblioteca padrão do Go. Podemos usar html/template
-	// para manter o HTML em um arquivo separado, o que nos permite alterar o layout
-	// de nossa página de edição sem modificar o código Go.
-
-	// =======================================> Vá para o arquivo edit.html
-
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -37,25 +29,18 @@ func carregaPagina(titulo string) (*Pagina, error) {
 	return &Pagina{Titulo: titulo, Corpo: corpo}, nil
 }
 
+// Já que estamos trabalhando com templates agora, vamos criar um template para o nosso viewHandler
+// Verifique o arquiv view.html
+
+// Modifique viewHandler de acordo:
+
 // viewHandler escreve o titulo e corpo da pagina em html formatado
 func viewHandler(escrever http.ResponseWriter, ler *http.Request) {
 	titulo := ler.URL.Path[len("/view/"):]
 	pagina, _ := carregaPagina(titulo)
-	fmt.Fprintf(escrever, "<h1>%s</h1><div>%s</div>", pagina.Titulo, pagina.Corpo)
+	template, _ := template.ParseFiles("view.html")
+	template.Execute(escrever, pagina)
 }
-
-// Modifique editHandler para usar o template, em vez do HTML hardcoded:
-
-// A função template.ParseFiles lerá o conteúdo de edit.html e retornará um ponteiro *template.Template.
-
-// O método template.Execute executa o template, escrevendo o HTML gerado no http.ResponseWriter.
-// Os identificadores .Titulo e .Corpo lá no edit.html referem-se a Titulo e Corpo
-// presentes aqui na struct Pagina.
-
-// As diretivas de temlate são colocadas entre chaves duplas. A instrução printf "%s" .Corpo
-// é uma chamada de função que tem .Corpo como uma string em vez de um fluxo de bytes como saída.
-// O html/template package ajuda a garantir que apenas HTML seguro e com aparência correta seja
-// gerado por ações de template.
 
 // editHandler carrega um formulário de edição
 func editHandler(escrever http.ResponseWriter, ler *http.Request) {
