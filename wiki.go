@@ -13,25 +13,34 @@ type Pagina struct {
 	Corpo  []byte
 }
 
-// Existem vários locais em nosso programa onde os erros são ignorados. Esta é uma má prática, até porque,
-// quando ocorre um erro, o programa terá um comportamento indesejado. A melhor solução é tratar os erros e
-// retornar uma mensagem de erro ao usuário. Dessa forma, se algo der errado, o servidor funcionará
-// exatamente como queremos e o usuário poderá ser notificado.
+// Há uma ineficiência neste código: renderizaTemplate chama ParseFiles sempre que uma página é
+// renderizada. Uma abordagem melhor seria chamar ParseFiles uma vez na inicialização do programa,
+// analisando todos os templates em um único *Template. Então, podemos usar o método ExecuteTemplate para
+// renderizar um template específico.
 
-// Primeiro, vamos lidar com os erros em renderizaTemplate:
+// Primeiro, criamos uma variável global chamada templates e a inicializamos com ParseFiles.
 
-// A função http.Error envia um código de resposta HTTP especificado (neste caso "Erro interno do servidor")
-// e uma mensagem de erro. A decisão de colocar isso em uma função separada já está valendo a pena pois
-// tanto viewHandler e editHandler que fazem uso de renderizaTemplate possuem tratamento de erro.
+// A função template.Must é um invólucro que entra em pânico quando é passado um valor error
+// não nulo (nil) e, caso contrário, retorna o *Template inalterado. O panic é apropriado aqui;
+// se os templates não puderem ser carregados, a única coisa sensata a fazer é sair do programa.
+
+// A função ParseFiles recebe qualquer número de argumentos de string que identificam nossos arquivos de
+// template e os parseam (não sei se existe essa palavra haha) em templates que são nomeados
+// após o nome base do arquivo. Se adicionássemos mais modelos ao nosso programa, adicionaríamos
+// seus nomes aos argumentos da chamada ParseFiles.
+
+// templates faz o cacheamento dos templates
+var templates = template.Must(template.ParseFiles("edit.html", "view.html"))
+
+// Em seguida, modificamos a função renderizaTemplate para chamar o método templates.ExecuteTemplate
+// com o nome do template apropriado:
+
+// Observe que o nome do template é o nome do arquivo do template, portanto, devemos anexar
+// ".html" ao argumento tmpl.
 
 // renderizaTemplate faz o parse dos arquivos tratados pelos handlers
 func renderizaTemplate(escrever http.ResponseWriter, tmpl string, pagina *Pagina) {
-	template, err := template.ParseFiles(tmpl + ".html")
-	if err != nil {
-		http.Error(escrever, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	template.Execute(escrever, pagina)
+	err := templates.ExecuteTemplate(escrever, tmpl+".html", pagina)
 	if err != nil {
 		http.Error(escrever, err.Error(), http.StatusInternalServerError)
 	}
@@ -73,14 +82,6 @@ func editHandler(escrever http.ResponseWriter, ler *http.Request) {
 	}
 	renderizaTemplate(escrever, "edit", pagina)
 }
-
-// Agora vamos consertar saveHandler:
-
-// A função salvar é uma função customizada que criamos ela não vem direto de packages do go então
-// então ela não foi implementada com retorno de erro, por isso nesse caso atribuimos a função
-// na variável err pra poder aplicar a mesma implementação de tratamento de erros padrão.
-
-// Quaisquer erros que ocorram durante pagina.salvar() serão relatados ao usuário.
 
 // A função saveHandler tratará do envio de formulários localizados nas páginas de edição
 func saveHandler(escrever http.ResponseWriter, ler *http.Request) {
