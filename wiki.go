@@ -1,14 +1,11 @@
 package main
 
 import (
-	// Pacote para auxilio no tratamento e criação de erros
 	"errors"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
-
-	// pacote de expressões regulares
 	"regexp"
 )
 
@@ -18,36 +15,20 @@ type Pagina struct {
 	Corpo  []byte
 }
 
-// Como você deve ter observado, este programa tem uma falha de segurança séria: um usuário pode fornecer um
-// caminho arbitrário para ser lido/escrito no servidor. Para atenuar isso, podemos escrever uma função para
-// validar o título com uma expressão regular.
-
-// Primeiro, adicione "regexp" à lista import. Então, podemos criar uma variável global para armazenar nossa
-// expressão de validação:
-
-// A função regexp.MustCompile irá analisar e compilar a expressão regular e retornar um regexp.Regexp.
-// MustCompile é diferente de Compile porque entrará em panic se a compilação da expressão falhar, enquanto
-// Compile retorna um error como um segundo parâmetro.
-
+// caminhovalido oferece a obtemTitulo uma expressão regular que caso não combine causa um panic
 var caminhovalido = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
 
 // templates faz o cacheamento dos templates
 var templates = template.Must(template.ParseFiles("edit.html", "view.html"))
 
-// Agora, vamos escrever uma função que usa a expressão caminhovalido para validar o caminho e extrair
-// o título da página:
-
-// Se o título coincide, ele será retornado junto com um valor nil de erro. Se o título for inválido,
-// a função gravará um erro "404 Not Found" na conexão HTTP e retornará um erro ao handler.
-// Para criar um novo erro customizado, temos que importar o pacote errors.
-
+// obtemTitulo usa a expressão regular em caminhovalido para validar um path
 func obtemTitulo(escrever http.ResponseWriter, ler *http.Request) (string, error) {
 	coincide := caminhovalido.FindStringSubmatch(ler.URL.Path)
 	if coincide == nil {
 		http.NotFound(escrever, ler)
 		return "", errors.New("Titulo da página inválido")
 	}
-	return coincide[2], nil // The title is the second subexpression.
+	return coincide[2], nil // O titulo é a segunda subexpressão
 }
 
 // renderizaTemplate faz o parse dos arquivos tratados pelos handlers
@@ -74,10 +55,14 @@ func carregaPagina(titulo string) (*Pagina, error) {
 	return &Pagina{Titulo: titulo, Corpo: corpo}, nil
 }
 
-// Vamos colocar uma chamada para obtemTitulo em cada um dos handlers:
+// Capturar a condição de erro em cada handler apresenta muitos códigos repetidos. E se pudéssemos
+// envolver cada um dos handlers em uma função que faz essa validação e verificação de erro?
+// As literal func de Go fornecem um meio poderoso de abstrair funcionalidades que pode nos ajudar aqui.
+
+// Primeiro, redfinimos os argumentos da função de cada um dos handlers para aceitar uma string de titulo
 
 // viewHandler r o titulo e corpo da pagina em html formatado
-func viewHandler(escrever http.ResponseWriter, ler *http.Request) {
+func viewHandler(escrever http.ResponseWriter, ler *http.Request, titulo string) {
 	titulo, err := obtemTitulo(escrever, ler)
 	if err != nil {
 		return
@@ -90,10 +75,10 @@ func viewHandler(escrever http.ResponseWriter, ler *http.Request) {
 	renderizaTemplate(escrever, "view", pagina)
 }
 
-// Vamos colocar uma chamada para obtemTitulo em cada um dos handlers:
+// Primeiro, redfinimos os argumentos da função de cada um dos handlers para aceitar uma string de titulo
 
 // editHandler carrega um formulário de edição
-func editHandler(escrever http.ResponseWriter, ler *http.Request) {
+func editHandler(escrever http.ResponseWriter, ler *http.Request, titulo string) {
 	titulo, err := obtemTitulo(escrever, ler)
 	if err != nil {
 		return
@@ -105,10 +90,10 @@ func editHandler(escrever http.ResponseWriter, ler *http.Request) {
 	renderizaTemplate(escrever, "edit", pagina)
 }
 
-// Vamos colocar uma chamada para obtemTitulo em cada um dos handlers:
+// Primeiro, redfinimos os argumentos da função de cada um dos handlers para aceitar uma string de titulo
 
 // A função saveHandler tratará do envio de formulários localizados nas páginas de edição
-func saveHandler(escrever http.ResponseWriter, ler *http.Request) {
+func saveHandler(escrever http.ResponseWriter, ler *http.Request, titulo string) {
 	titulo, err := obtemTitulo(escrever, ler)
 	if err != nil {
 		return
@@ -124,9 +109,41 @@ func saveHandler(escrever http.ResponseWriter, ler *http.Request) {
 	http.Redirect(escrever, ler, "/view/"+titulo, http.StatusFound)
 }
 
+// Agora vamos definir uma função que encapsula uma função do tipo handler
+// e retorna uma função do tipo http.HandlerFunc
+
+// podemos pegar a função obtemTitulo e usá-la aqui como argumento (com algumas pequenas modificações)
+
+// A função retornada é chamada de clojure porque contém valores definidos fora dela. Nesse caso,
+// a variável função (o único argumento para criaHandler ) é anexada pelo clojure.
+// A variável função será um de nossos handlers de salvar, editar ou visualizar. (save/edit/view)
+
+// O clojure retornado por criaHandler é uma função que recebe um http.ResponseWriter e
+// http.Request (em outras palavras, um http.HandlerFunc ).
+
+// O clojure extrai o titulo do caminho da solicitação e o valida com o caminhovalido regexp.
+// Se titulo for inválido, um erro será gravado no ResponseWriter usando a função http.NotFound.
+// Se o titulo for válido, a função de handler encapsulada será o argumento função.
+// chamado com o ResponseWriter, Request e titulo como argumentos.
+
+func criaHandler(função func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+	return func(escrever http.ResponseWriter, ler *http.Request) {
+		coincide := caminhovalido.FindStringSubmatch(ler.URL.Path)
+		if coincide == nil {
+			http.NotFound(escrever, ler)
+			return
+		}
+		função(escrever, ler, coincide[2])
+	}
+}
+
+// Agora podemos agrupar as funções de handler com criaHandler na main func,
+// antes de serem registradas no pacote http
+
 func main() {
-	http.HandleFunc("/view/", viewHandler)
-	http.HandleFunc("/edit/", editHandler)
-	http.HandleFunc("/save/", saveHandler)
+	http.HandleFunc("/view/", criaHandler(viewHandler))
+	http.HandleFunc("/edit/", criaHandler(editHandler))
+	http.HandleFunc("/save/", criaHandler(saveHandler))
+
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
