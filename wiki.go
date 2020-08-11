@@ -28,7 +28,7 @@ func obtemTitulo(escrever http.ResponseWriter, ler *http.Request) (string, error
 		http.NotFound(escrever, ler)
 		return "", errors.New("Titulo da página inválido")
 	}
-	return coincide[2], nil // O titulo é a segunda subexpressão
+	return coincide[2], nil
 }
 
 // renderizaTemplate faz o parse dos arquivos tratados pelos handlers
@@ -55,8 +55,6 @@ func carregaPagina(titulo string) (*Pagina, error) {
 	return &Pagina{Titulo: titulo, Corpo: corpo}, nil
 }
 
-// Por fim, removemos as chamadas para obtemTitulo das funções de handler, tornando-as muito mais simples
-
 // viewHandler r o titulo e corpo da pagina em html formatado
 func viewHandler(escrever http.ResponseWriter, ler *http.Request, titulo string) {
 	pagina, err := carregaPagina(titulo)
@@ -67,8 +65,6 @@ func viewHandler(escrever http.ResponseWriter, ler *http.Request, titulo string)
 	renderizaTemplate(escrever, "view", pagina)
 }
 
-// Por fim, removemos as chamadas para obtemTitulo das funções de handler, tornando-as muito mais simples
-
 // editHandler carrega um formulário de edição
 func editHandler(escrever http.ResponseWriter, ler *http.Request, titulo string) {
 	pagina, err := carregaPagina(titulo)
@@ -77,8 +73,6 @@ func editHandler(escrever http.ResponseWriter, ler *http.Request, titulo string)
 	}
 	renderizaTemplate(escrever, "edit", pagina)
 }
-
-// Por fim, removemos as chamadas para obtemTitulo das funções de handler, tornando-as muito mais simples
 
 // A função saveHandler tratará do envio de formulários localizados nas páginas de edição
 func saveHandler(escrever http.ResponseWriter, ler *http.Request, titulo string) {
@@ -111,11 +105,3 @@ func main() {
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
-
-// Recompile o código e execute o aplicativo:
-
-// $ go build wiki.go
-// $ ./wiki
-
-// Visite http://localhost:8080/view/ANewPage deve apresentar o formulário de edição da página. Você
-// poderá inserir algum texto, clicar em 'Salvar' e ser redirecionado para a página recém-criada.
