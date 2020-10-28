@@ -797,3 +797,5 @@ Chegamos ao final desse passo a passo e você aprendeu muito pelo caminho, desde
 
 Caso tenha qualquer duvida fico disponível no Twitter para ajudar.  
 Parabéns por ter chegado até aqui.
+
+[![Stargazers repo roster for @wagnerdevocelot/gowiki](https://reporoster.com/stars/wagnerdevocelot/gowiki)](https://github.com/wagnerdevocelot/gowiki/stargazers)
